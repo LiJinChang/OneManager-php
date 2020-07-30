@@ -2,7 +2,6 @@
 
 $Base64Env = [
     //'APIKey', // used in heroku.
-    //'Region', // used in SCF.
     //'SecretId', // used in SCF.
     //'SecretKey', // used in SCF.
     //'AccessKeyID', // used in FC.
@@ -47,7 +46,6 @@ $Base64Env = [
 
 $CommonEnv = [
     'APIKey', // used in heroku.
-    'Region', // used in SCF.
     'SecretId', // used in SCF.
     'SecretKey', // used in SCF.
     'AccessKeyID', // used in FC.
@@ -74,7 +72,6 @@ $CommonEnv = [
 
 $ShowedCommonEnv = [
     //'APIKey', // used in heroku.
-    //'Region', // used in SCF.
     //'SecretId', // used in SCF.
     //'SecretKey', // used in SCF.
     //'AccessKeyID', // used in FC.
