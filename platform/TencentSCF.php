@@ -121,14 +121,14 @@ function setConfig($arr, $disktag = '')
     $envs = array_filter($envs, 'array_value_isnot_null');
     ksort($envs);
     $response = updateEnvironment($envs, $_SERVER['function_name'], $_SERVER['Region'], $_SERVER['namespace'], getConfig('SecretId'), getConfig('SecretKey'));
-    WaitSCFStat();
+    WaitSCFStat($_SERVER['function_name'], $_SERVER['Region'], $_SERVER['namespace'], getConfig('SecretId'), getConfig('SecretKey'));
     return $response;
 }
 
-function WaitSCFStat()
+function WaitSCFStat($function_name, $Region, $Namespace, $SecretId, $SecretKey)
 {
     $trynum = 0;
-    while( json_decode(getfunctioninfo($_SERVER['function_name'], $_SERVER['Region'], $_SERVER['namespace'], getConfig('SecretId'), getConfig('SecretKey')),true)['Response']['Status']!='Active' ) echo '
+    while( json_decode(getfunctioninfo($function_name, $Region, $Namespace, $SecretId, $SecretKey),true)['Response']['Status']!='Active' ) echo '
 '.++$trynum;
 }
 
@@ -367,6 +367,35 @@ function updateEnvironment($Envs, $function_name, $Region, $Namespace, $SecretId
 
 function SetbaseConfig($Envs, $function_name, $Region, $Namespace, $SecretId, $SecretKey)
 {
+    $meth = 'POST';
+    $host = 'scf.tencentcloudapi.com';
+    $tmpdata['Action'] = 'UpdateFunctionConfiguration';
+    $tmpdata['FunctionName'] = $function_name;
+    $tmpdata['Namespace'] = $Namespace;
+    $tmpdata['Nonce'] = time();
+    $tmpdata['Region'] = $Region;
+    $tmpdata['SecretId'] = $SecretId;
+    $tmpdata['Timestamp'] = time();
+    $tmpdata['Token'] = '';
+    $tmpdata['Version'] = '2018-04-16';
+    $tmpdata['Description'] = 'Onedrive index and manager in SCF.';
+    $tmpdata['MemorySize'] = 64;
+    $tmpdata['Timeout'] = 30;
+    $data = ReorganizeDate($tmpdata);
+    //echo $data;
+    $signStr = base64_encode(hash_hmac('sha1', $meth.$host.'/?'.$data, $SecretKey, true));
+    //echo urlencode($signStr);
+    $response = post2url('https://'.$host, $data.'&Signature='.urlencode($signStr));
+    if (api_error(setConfigResponse($response))) {
+        return $response;
+    }
+    if ( json_decode(getfunctioninfo($function_name, $Region, $Namespace, $SecretId, $SecretKey),true)['Response']['Timeout'] < 25 ) {
+        $tmp['Response']['Error']['Message'] = 'Operating, please try again.';
+        $tmp['Response']['Error']['Code'] = 'Retry';
+        return json_encode($tmp);
+    }
+    WaitSCFStat($function_name, $Region, $Namespace, $SecretId, $SecretKey);
+
     $tmp = json_decode(getfunctioninfo($function_name, $Region, $Namespace, $SecretId, $SecretKey),true)['Response']['Environment']['Variables'];
     foreach ($tmp as $tmp1) {
         $tmp_env[$tmp1['Key']] = $tmp1['Value'];
@@ -469,7 +498,7 @@ function updateProgram($function_name, $Region, $Namespace, $SecretId, $SecretKe
 
 function api_error($response)
 {
-    return isset($response['Error']);
+    return ($response==null)||isset($response['Error']);
 }
 
 function api_error_msg($response)
@@ -508,8 +537,8 @@ function OnekeyUpate($auth = 'qkqpttgf', $project = 'OneManager-php', $branch = 
             break;
         }
     }
-    //error_log($outPath);
-    file_put_contents($outPath . 'config.php', file_get_contents('config.php'));
+    // 放入配置文件
+    file_put_contents($outPath . '/config.php', file_get_contents(__DIR__.'/../config.php'));
 
     // 将目录中文件打包成zip
     //$zip=new ZipArchive();
