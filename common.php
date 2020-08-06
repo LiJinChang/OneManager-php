@@ -1,8 +1,14 @@
 <?php
 
+global $Base64Env;
+global $CommonEnv;
+global $ShowedCommonEnv;
+global $InnerEnv;
+global $ShowedInnerEnv;
+global $Base64Env;
+
 $Base64Env = [
     //'APIKey', // used in heroku.
-    //'Region', // used in SCF.
     //'SecretId', // used in SCF.
     //'SecretKey', // used in SCF.
     //'AccessKeyID', // used in FC.
@@ -47,7 +53,6 @@ $Base64Env = [
 
 $CommonEnv = [
     'APIKey', // used in heroku.
-    'Region', // used in SCF.
     'SecretId', // used in SCF.
     'SecretKey', // used in SCF.
     'AccessKeyID', // used in FC.
@@ -74,7 +79,6 @@ $CommonEnv = [
 
 $ShowedCommonEnv = [
     //'APIKey', // used in heroku.
-    //'Region', // used in SCF.
     //'SecretId', // used in SCF.
     //'SecretKey', // used in SCF.
     //'AccessKeyID', // used in FC.
@@ -240,11 +244,24 @@ function main($path)
             return output('<script>alert(\''.getconstStr('SetSecretsFirst').'\');</script>', 302, [ 'Location' => $url ]);
         }
 
+    $_SERVER['sitename'] = getConfig('sitename');
+    if (empty($_SERVER['sitename'])) $_SERVER['sitename'] = getconstStr('defaultSitename');
     $_SERVER['base_disk_path'] = $_SERVER['base_path'];
     $disktags = explode("|",getConfig('disktag'));
 //    echo 'count$disk:'.count($disktags);
     if (count($disktags)>1) {
-        if ($path=='/'||$path=='') return output('', 302, [ 'Location' => path_format($_SERVER['base_path'].'/'.$disktags[0].'/') ]);
+        if ($path=='/'||$path=='') {
+            if ($_GET['json']) {
+                // return a json
+                $files['folder']['childCount'] = count($disktags);
+                foreach ($disktags as $disktag) {
+                    $files['children'][$disktag]['folder'] = 1;
+                    $files['children'][$disktag]['name'] = $disktag;
+                }
+                return files_json($files);
+            } // else return render_list($path, $files);
+            return output('', 302, [ 'Location' => path_format($_SERVER['base_path'].'/'.$disktags[0].'/') ]);
+        }
         $_SERVER['disktag'] = splitfirst( substr(path_format($path), 1), '/' )[0];
         //$pos = strpos($path, '/');
         //if ($pos>1) $_SERVER['disktag'] = substr($path, 0, $pos);
@@ -538,8 +555,6 @@ function getconstStr($str)
 
 function config_oauth()
 {
-    $_SERVER['sitename'] = getConfig('sitename');
-    if (empty($_SERVER['sitename'])) $_SERVER['sitename'] = getconstStr('defaultSitename');
     $_SERVER['redirect_uri'] = 'https://scfonedrive.github.io';
     if (getConfig('Drive_ver')=='shareurl') {
         $_SERVER['api_url'] = getConfig('shareapiurl');
@@ -1450,12 +1465,17 @@ function get_refresh_token()
             $tmptoken['refresh_token'] = $refresh_token;
             $tmptoken['token_expires'] = time()+7*24*60*60;
             if (getConfig('usesharepoint')=='on') $tmptoken['siteid'] = get_siteid($ret['access_token']);
-            setConfig($tmptoken, $_COOKIE['disktag']);
-            savecache('access_token', $ret['access_token'], $ret['expires_in'] - 60);
-            //WaitSCFStat();
-            $str .= '
-            <meta http-equiv="refresh" content="5;URL=' . $url . '">';
-            return message($str, getconstStr('WaitJumpIndex'));
+            $response = setConfigResponse( setConfig($tmptoken, $_COOKIE['disktag']) );
+            if (api_error($response)) {
+                $html = api_error_msg($response);
+                $title = 'Error';
+                return message($html, $title, 201);
+            } else {
+                savecache('access_token', $ret['access_token'], $ret['expires_in'] - 60);
+                $str .= '
+                <meta http-equiv="refresh" content="5;URL=' . $url . '">';
+                return message($str, getconstStr('WaitJumpIndex'));
+            }
         }
         return message('<pre>' . json_encode(json_decode($tmp['body']), JSON_PRETTY_PRINT) . '</pre>', $tmp['stat']);
         //return message('<pre>' . json_encode($ret, JSON_PRETTY_PRINT) . '</pre>', 500);
@@ -1617,7 +1637,7 @@ function EnvOpt($needUpdate = 0)
     asort($ShowedInnerEnv);
     $html = '<title>OneManager '.getconstStr('Setup').'</title>';
     if (isset($_POST['updateProgram'])&&$_POST['updateProgram']==getconstStr('updateProgram')) {
-        $response = OnekeyUpate($_POST['auth'], $_POST['project'], $_POST['branch']);
+        $response = setConfigResponse(OnekeyUpate($_POST['auth'], $_POST['project'], $_POST['branch']));
         if (api_error($response)) {
             $html = api_error_msg($response);
             $title = 'Error';
