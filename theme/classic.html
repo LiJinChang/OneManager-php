@@ -35,7 +35,7 @@
         .list-header-container{position:relative}
         .list-header-container a.back-link{color:#000;display:inline-block;position:absolute;font-size:16px;margin:20px 10px;padding:10px 10px;vertical-align:middle;text-decoration:none}
         .list-container,.list-header-container,.list-wrapper,a.back-link:hover,body{color:#24292e}
-        .table-header{margin:0;border:0 none;padding:30px 60px;text-align:left;font-weight:400;color:#000;background-color:rgba(245,245,245,0.5);word-break: break-all;word-wrap: break-word;}
+        .table-header{margin:0;border:0 none;padding:30px 30px;text-align:left;font-weight:400;color:#000;background-color:rgba(245,245,245,0.5);word-break: break-all;word-wrap: break-word;}
         .list-body-container{position:relative;left:0;overflow-x:hidden;overflow-y:auto;box-sizing:border-box;background:rgba(245,245,245,0.5)}
         .more-disk{margin:0;border:0 none;padding:30px 30px;text-align:left;font-weight:400;color:#000;background-color:rgba(245,245,245,0.5);white-space:nowrap;overflow:auto;}
         .more-disk a{margin:0 10px;padding:5px;transition-duration: 0.4s;border-radius: 12px; background-color: white; color: black; border: 2px solid rgba(85,85,85,0.7); }
@@ -63,6 +63,9 @@
         .readme{padding:8px;background-color:rgba(245,245,245,0.5);}
         .markdown-body, .customfile{padding:20px;text-align:left}
         @media only screen and (max-width:480px){
+<!--BackgroundMStart-->
+            body{background-repeat:no-repeat;background-size:cover;background-attachment:fixed;background-image:url("<!--BackgroundMUrl-->");}
+<!--BackgroundMEnd-->
             .title{margin-bottom:24px}
             .list-wrapper{width:95%; margin-bottom:24px;}
             .list-table {padding:8px}
@@ -146,19 +149,14 @@
     <div class="list-wrapper" id="list-div">
         <div class="list-container">
             <div class="list-header-container">
-<!--BackArrowStart-->
-                <a href="<!--BackArrowUrl-->" class="back-link">
-                    <ion-icon name="arrow-back"></ion-icon>
-                </a>
-<!--BackArrowEnd-->
-                <h3 class="table-header"><!--PathArrayStart--> / <a href="<!--PathArrayLink-->"><!--PathArrayName--></a><!--PathArrayEnd--></h3>
+                <h3 class="table-header"><a href="<!--base_path-->"><!--constStr@Home--></a><!--DiskPathArrayStart--> / <a href="<!--PathArrayLink-->"><!--PathArrayName--></a><!--DiskPathArrayEnd--></h3>
             </div>
             <div class="list-body-container">
 <!--EncryptedStart-->
                 <div style="padding:20px">
 	            <center>
 	                <form action="" method="post">
-		            <input name="password1" type="password" placeholder="<!--constStr@InputPassword-->">
+		            <input id="password1" name="password1" type="password" placeholder="<!--constStr@InputPassword-->">
 		            <input type="submit" value="<!--constStr@Submit-->">
 	                </form>
                 </center>
@@ -315,10 +313,10 @@
                 </div>
 <!--AdminEnd-->
 <!--IsFolderEnd-->
-<!--ListEnd-->
             </div>
         </div>
     </div>
+<!--ListEnd-->
 <!--ReadmemdStart-->
     <div class="list-wrapper" id="readme-div">
         <div class="list-container">
@@ -651,15 +649,13 @@
             strarry=str.split('.');
             ext=strarry[strarry.length-1].toLowerCase();
             if (images.indexOf(ext)>-1) {
+                var url=files[$i].href;
+                url=url.substr(0,url.length-8);
                 if (document.getElementById('originalpic').checked==true) {
-                    var url=files[$i].href;
-                    url=url.substr(0,url.length-8);
                     files[$i].parentNode.parentNode.innerHTML='<td colspan="3"><img src="'+url+'" alt="'+str+'" onload="if (this.offsetWidth>document.getElementById(\'list-div\').offsetWidth) this.style.width=\'100%\';"></td>';
                     $i--;
                 } else {
-                    var nurl=window.location.href;
-                    if (nurl.substr(-1)!="/") nurl+="/";
-                    var url=nurl+str+'?thumbnails';
+                    url+='?thumbnails';
                     get_thumbnails_url(url, str, files[$i]);
                 }
             }
@@ -1003,12 +999,14 @@
                             var response=JSON.parse(xhr.responseText);
                             if (response['size']>0) {
                                 // contain size, upload finish. 有size说明是最终返回，上传结束
-                                var xhr3 = new XMLHttpRequest();
-                                xhr3.open("GET", '?action=del_upload_cache&filelastModified='+file.lastModified+'&filesize='+file.size+'&filename='+filename);
-                                xhr3.setRequestHeader('x-requested-with','XMLHttpRequest');
-                                xhr3.send(null);
-                                xhr3.onload = function(e){
-                                    console.log(xhr3.responseText+','+xhr3.status);
+                                if (totalsize>10*1024*1024) {
+                                    var xhr3 = new XMLHttpRequest();
+                                    xhr3.open("GET", '?action=del_upload_cache&filelastModified='+file.lastModified+'&filesize='+file.size+'&filename='+filename);
+                                    xhr3.setRequestHeader('x-requested-with','XMLHttpRequest');
+                                    xhr3.send(null);
+                                    xhr3.onload = function(e){
+                                        console.log(xhr3.responseText+','+xhr3.status);
+                                    }
                                 }
                                 EndTime=new Date();
                                 MiddleStr = '<!--constStr@EndAt-->:'+EndTime.toLocaleString()+'<br>';
@@ -1019,6 +1017,7 @@
                                 }
                                 document.getElementById('upfile_td1_'+tdnum).innerHTML='<div style="color:green"><a href="<!--base_disk_path--><!--Path-->'+(file.webkitRelativePath||response.name)+'?preview" id="upfile_a_'+tdnum+'" target="_blank">'+document.getElementById('upfile_td1_'+tdnum).innerHTML+'</a><br><a href="<!--base_disk_path--><!--Path-->'+(file.webkitRelativePath||response.name)+'" id="upfile_a1_'+tdnum+'"></a><!--constStr@UploadComplete--><button onclick="CopyAllDownloadUrl(\'#upfile_a1_'+tdnum+'\');" id="upfile_cpbt_'+tdnum+'" <!--AdminStart--> style="display:none"<!--AdminEnd--> ><!--constStr@CopyUrl--></button></div>';
                                 label.innerHTML=StartStr+MiddleStr;
+                                label.style.color='green';
                                 // uploadbuttonshow();
 <!--AdminStart-->
                                 response.name=file.webkitRelativePath||response.name;
@@ -1240,6 +1239,9 @@
         document.getElementById('login_input').focus();
     }
 <!--LoginEnd-->
+<!--EncryptedStart-->
+    document.getElementById('password1').focus();
+<!--EncryptedEnd-->
 </script>
 <script src="//unpkg.zhimg.com/ionicons@4.4.4/dist/ionicons.js"></script>
 <!--customScript-->
