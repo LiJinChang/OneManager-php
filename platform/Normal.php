@@ -4,8 +4,16 @@ function getpath()
 {
     $_SERVER['firstacceptlanguage'] = strtolower(splitfirst(splitfirst($_SERVER['HTTP_ACCEPT_LANGUAGE'],';')[0],',')[0]);
     if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_X_FORWARDED_FOR'];
+    if ($_SERVER['REQUEST_SCHEME']!='http'&&$_SERVER['REQUEST_SCHEME']!='https') {
+        if ($_SERVER['HTTP_X_FORWARDED_PROTO']!='') {
+            $tmp = explode(',', $_SERVER['HTTP_X_FORWARDED_PROTO'])[0];
+            if ($tmp=='http'||$tmp=='https') $_SERVER['REQUEST_SCHEME'] = $tmp;
+        }
+        //if ($_SERVER['REQUEST_SCHEME']!='http'&&$_SERVER['REQUEST_SCHEME']!='https') {
+        //    echo $_SERVER['REQUEST_SCHEME'];
+        //}
+    }
     $_SERVER['host'] = $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'];
-    //if ($_SERVER['HTTP_REFERER']!='') 
     $_SERVER['referhost'] = explode('/', $_SERVER['HTTP_REFERER'])[2];
     if (isset($_SERVER['DOCUMENT_ROOT'])&&$_SERVER['DOCUMENT_ROOT']==='/app') $_SERVER['base_path'] = '/';
     else $_SERVER['base_path'] = path_format(substr($_SERVER['SCRIPT_NAME'], 0, -10) . '/');
@@ -317,8 +325,8 @@ function OnekeyUpate($auth = 'qkqpttgf', $project = 'OneManager-php', $branch = 
     $githubfile = file_get_contents($url);
     if (!$githubfile) return 0;
     file_put_contents($tarfile, $githubfile);
-    if (splitfirst(PHP_VERSION, '.')[0] == '7') {
-        $phar = new PharData($tarfile); // need php7
+    if (splitfirst(PHP_VERSION, '.')[0] > '5') {
+        $phar = new PharData($tarfile); // need php5.3, 7, 8
         $phar->extractTo($projectPath, null, true);//路径 要解压的文件 是否覆盖
     } else {
         ob_start();
